@@ -3,8 +3,8 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0+-blue.svg)](https://www.typescriptlang.org/)
 [![Node.js](https://img.shields.io/badge/Node.js-18+-green.svg)](https://nodejs.org/)
-[![Build Status](https://img.shields.io/badge/Build-Passing-brightgreen.svg)]()
-[![Tests](https://img.shields.io/badge/Tests-Passing-brightgreen.svg)]()
+[![CI](https://github.com/runitsolutions/mcp-server-ovh/actions/workflows/ci.yml/badge.svg)](https://github.com/runitsolutions/mcp-server-ovh/actions/workflows/ci.yml)
+[![Coverage](https://codecov.io/gh/runitsolutions/mcp-server-ovh/branch/main/graph/badge.svg)](https://codecov.io/gh/runitsolutions/mcp-server-ovh)
 
 A Model Context Protocol (MCP) server that provides standardized access to OVH API services. This server enables AI assistants and applications to interact with OVH's cloud infrastructure through a unified, secure interface.
 

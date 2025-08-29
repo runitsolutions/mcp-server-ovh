@@ -155,6 +155,86 @@ class OvhMcpServer {
                             type: "object",
                             properties: {}
                         }
+                    },
+                    {
+                        name: "ovh_get_payment_methods",
+                        description: "Get user payment methods",
+                        inputSchema: {
+                            type: "object",
+                            properties: {}
+                        }
+                    },
+                    {
+                        name: "ovh_get_orders",
+                        description: "Get user orders",
+                        inputSchema: {
+                            type: "object",
+                            properties: {}
+                        }
+                    },
+                    {
+                        name: "ovh_get_cloud_projects",
+                        description: "Get cloud projects",
+                        inputSchema: {
+                            type: "object",
+                            properties: {}
+                        }
+                    },
+                    {
+                        name: "ovh_get_dedicated_servers",
+                        description: "Get dedicated servers",
+                        inputSchema: {
+                            type: "object",
+                            properties: {}
+                        }
+                    },
+                    {
+                        name: "ovh_get_vps",
+                        description: "Get VPS instances",
+                        inputSchema: {
+                            type: "object",
+                            properties: {}
+                        }
+                    },
+                    {
+                        name: "ovh_get_ips",
+                        description: "Get IP addresses",
+                        inputSchema: {
+                            type: "object",
+                            properties: {}
+                        }
+                    },
+                    {
+                        name: "ovh_get_vrack",
+                        description: "Get vRack information",
+                        inputSchema: {
+                            type: "object",
+                            properties: {}
+                        }
+                    },
+                    {
+                        name: "ovh_get_load_balancers",
+                        description: "Get load balancers",
+                        inputSchema: {
+                            type: "object",
+                            properties: {}
+                        }
+                    },
+                    {
+                        name: "ovh_get_ssl_certificates",
+                        description: "Get SSL certificates",
+                        inputSchema: {
+                            type: "object",
+                            properties: {}
+                        }
+                    },
+                    {
+                        name: "ovh_get_dbaas_logs",
+                        description: "Get DBaaS Logs services",
+                        inputSchema: {
+                            type: "object",
+                            properties: {}
+                        }
                     }
                 ]
             };
@@ -178,6 +258,16 @@ class OvhMcpServer {
                     case "ovh_get_user_info":
                     case "ovh_get_bills":
                     case "ovh_get_services":
+                    case "ovh_get_payment_methods":
+                    case "ovh_get_orders":
+                    case "ovh_get_cloud_projects":
+                    case "ovh_get_dedicated_servers":
+                    case "ovh_get_vps":
+                    case "ovh_get_ips":
+                    case "ovh_get_vrack":
+                    case "ovh_get_load_balancers":
+                    case "ovh_get_ssl_certificates":
+                    case "ovh_get_dbaas_logs":
                         return await this.handleSimpleRequest(name);
                     default:
                         throw new Error(`Unknown tool: ${name}`);
@@ -207,46 +297,106 @@ class OvhMcpServer {
     }
 
         async initializeClient(args: any) {
-        if (!ovh) {
-            ovh = require('@ovhcloud/node-ovh');
+        try {
+            if (!ovh) {
+                ovh = require('@ovhcloud/node-ovh');
+            }
+
+            // Validate credentials format
+            if (!args.appKey || !args.appSecret || !args.consumerKey) {
+                throw new Error("Missing required credentials: appKey, appSecret, and consumerKey are required");
+            }
+
+            console.error(`Initializing OVH client with endpoint: ${args.endpoint}`);
+
+            this.ovhClient = ovh({
+                endpoint: args.endpoint,
+                appKey: args.appKey,
+                appSecret: args.appSecret,
+                consumerKey: args.consumerKey
+            });
+
+            console.error("OVH client initialized successfully");
+
+            return {
+                content: [
+                    {
+                        type: "text",
+                        text: `OVH client initialized successfully with endpoint: ${args.endpoint}`
+                    }
+                ]
+            };
+        } catch (error: any) {
+            console.error("Failed to initialize OVH client:", error);
+
+            let errorMessage = "Unknown initialization error";
+
+            if (error instanceof Error) {
+                errorMessage = error.message;
+            } else if (typeof error === 'string') {
+                errorMessage = error;
+            }
+
+            return {
+                content: [
+                    {
+                        type: "text",
+                        text: `Error: Failed to initialize OVH client: ${errorMessage}`
+                    }
+                ]
+            };
         }
-
-        this.ovhClient = ovh({
-            endpoint: args.endpoint,
-            appKey: args.appKey,
-            appSecret: args.appSecret,
-            consumerKey: args.consumerKey
-        });
-
-        return {
-            content: [
-                {
-                    type: "text",
-                    text: `OVH client initialized successfully with endpoint: ${args.endpoint}`
-                }
-            ]
-        };
     }
 
     async initializeOAuth2(args: any) {
-        if (!ovh) {
-            ovh = require('@ovhcloud/node-ovh');
+        try {
+            if (!ovh) {
+                ovh = require('@ovhcloud/node-ovh');
+            }
+
+            // Validate OAuth2 credentials format
+            if (!args.clientID || !args.clientSecret) {
+                throw new Error("Missing required OAuth2 credentials: clientID and clientSecret are required");
+            }
+
+            console.error(`Initializing OVH OAuth2 client with endpoint: ${args.endpoint}`);
+
+            this.ovhClient = ovh({
+                endpoint: args.endpoint,
+                clientID: args.clientID,
+                clientSecret: args.clientSecret
+            });
+
+            console.error("OVH OAuth2 client initialized successfully");
+
+            return {
+                content: [
+                    {
+                        type: "text",
+                        text: `OVH OAuth2 client initialized successfully with endpoint: ${args.endpoint}`
+                    }
+                ]
+            };
+        } catch (error: any) {
+            console.error("Failed to initialize OVH OAuth2 client:", error);
+
+            let errorMessage = "Unknown OAuth2 initialization error";
+
+            if (error instanceof Error) {
+                errorMessage = error.message;
+            } else if (typeof error === 'string') {
+                errorMessage = error;
+            }
+
+            return {
+                content: [
+                    {
+                        type: "text",
+                        text: `Error: Failed to initialize OVH OAuth2 client: ${errorMessage}`
+                    }
+                ]
+            };
         }
-
-        this.ovhClient = ovh({
-            endpoint: args.endpoint,
-            clientID: args.clientID,
-            clientSecret: args.clientSecret
-        });
-
-        return {
-            content: [
-                {
-                    type: "text",
-                    text: `OVH OAuth2 client initialized successfully with endpoint: ${args.endpoint}`
-                }
-            ]
-        };
     }
 
     async makeRequest(args: any) {
@@ -257,6 +407,18 @@ class OvhMcpServer {
         try {
             const result = await this.ovhClient.requestPromised(args.method, args.path, args.data);
 
+            // Validate response format
+            if (result === null || result === undefined) {
+                return {
+                    content: [
+                        {
+                            type: "text",
+                            text: "Warning: API returned empty response"
+                        }
+                    ]
+                };
+            }
+
             return {
                 content: [
                     {
@@ -265,8 +427,26 @@ class OvhMcpServer {
                     }
                 ]
             };
-        } catch (error) {
-            const errorMessage = error instanceof Error ? error.message : String(error);
+        } catch (error: any) {
+            console.error(`OVH API request failed for ${args.method} ${args.path}:`, error);
+
+            let errorMessage = "Unknown error occurred";
+
+            if (error instanceof Error) {
+                errorMessage = error.message;
+            } else if (typeof error === 'string') {
+                errorMessage = error;
+            } else if (error && typeof error === 'object') {
+                // Handle OVH API specific error format
+                if (error.errorCode) {
+                    errorMessage = `OVH API Error ${error.errorCode}: ${error.message || 'Unknown error'}`;
+                } else if (error.message) {
+                    errorMessage = error.message;
+                } else {
+                    errorMessage = JSON.stringify(error);
+                }
+            }
+
             return {
                 content: [
                     {
@@ -285,23 +465,88 @@ class OvhMcpServer {
 
         try {
             let path: string;
+            let operation: string;
+
             switch (toolName) {
                 case "ovh_get_user_info":
                     path = "/me";
+                    operation = "user information retrieval";
                     break;
                 case "ovh_get_bills":
                     path = "/me/bill";
+                    operation = "billing information retrieval";
                     break;
                 case "ovh_get_services":
-                    path = "/me/service";
+                    path = "/service";
+                    operation = "services information retrieval";
+                    break;
+                case "ovh_get_payment_methods":
+                    path = "/me/payment/method";
+                    operation = "payment methods retrieval";
+                    break;
+                case "ovh_get_orders":
+                    path = "/me/order";
+                    operation = "orders retrieval";
+                    break;
+                case "ovh_get_cloud_projects":
+                    path = "/cloud/project";
+                    operation = "cloud projects retrieval";
+                    break;
+                case "ovh_get_dedicated_servers":
+                    path = "/dedicated/server";
+                    operation = "dedicated servers retrieval";
+                    break;
+                case "ovh_get_vps":
+                    path = "/vps";
+                    operation = "VPS instances retrieval";
+                    break;
+                case "ovh_get_ips":
+                    path = "/ip";
+                    operation = "IP addresses retrieval";
+                    break;
+                case "ovh_get_vrack":
+                    path = "/vrack";
+                    operation = "vRack information retrieval";
+                    break;
+                case "ovh_get_load_balancers":
+                    path = "/ipLoadbalancing";
+                    operation = "load balancers retrieval";
+                    break;
+                case "ovh_get_ssl_certificates":
+                    path = "/ssl";
+                    operation = "SSL certificates retrieval";
+                    break;
+                case "ovh_get_dbaas_logs":
+                    path = "/dbaas/logs";
+                    operation = "DBaaS Logs services retrieval";
                     break;
                 default:
                     throw new Error(`Unknown tool: ${toolName}`);
             }
 
-            const result = await this.ovhClient.requestPromised('GET', path).catch((error) => {
-                throw new Error(`OVH API request failed: ${error.message || error}`);
-            });
+            console.error(`Executing ${operation} for ${toolName}...`);
+
+            const result = await this.ovhClient.requestPromised('GET', path);
+
+            // Validate response
+            if (result === null || result === undefined) {
+                console.warn(`Warning: ${operation} returned empty response`);
+                return {
+                    content: [
+                        {
+                            type: "text",
+                            text: `Warning: No data available for ${operation}`
+                        }
+                    ]
+                };
+            }
+
+            // Additional validation for specific endpoints
+            if (toolName === "ovh_get_services" && Array.isArray(result)) {
+                console.error(`Retrieved ${result.length} services`);
+            } else if (toolName === "ovh_get_bills" && Array.isArray(result)) {
+                console.error(`Retrieved ${result.length} bills`);
+            }
 
             return {
                 content: [
@@ -311,8 +556,26 @@ class OvhMcpServer {
                     }
                 ]
             };
-        } catch (error) {
-            const errorMessage = error instanceof Error ? error.message : String(error);
+        } catch (error: any) {
+            console.error(`Failed to execute ${toolName}:`, error);
+
+            let errorMessage = "Unknown error occurred";
+
+            if (error instanceof Error) {
+                errorMessage = error.message;
+            } else if (typeof error === 'string') {
+                errorMessage = error;
+            } else if (error && typeof error === 'object') {
+                // Handle OVH API specific error format
+                if (error.errorCode) {
+                    errorMessage = `OVH API Error ${error.errorCode}: ${error.message || 'Unknown error'}`;
+                } else if (error.message) {
+                    errorMessage = error.message;
+                } else {
+                    errorMessage = JSON.stringify(error);
+                }
+            }
+
             return {
                 content: [
                     {

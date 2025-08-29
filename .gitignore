@@ -16,6 +16,12 @@ build/
 .env.test.local
 .env.production.local
 
+# OVH API Credentials (NEVER commit these!)
+ovh-credentials.json
+ovh-keys.txt
+*credentials*
+*secret*
+
 # IDE files
 .vscode/
 .idea/
@@ -85,4 +91,5 @@ playwright-report/
 # Temporary files
 tmp/
 temp/
+
 

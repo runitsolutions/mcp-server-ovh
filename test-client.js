@@ -10,9 +10,9 @@ const serverProcess = spawn('node', ['dist/index.js'], {
     env: {
         ...process.env,
         OVH_ENDPOINT: 'ovh-us',
-        OVH_APP_KEY: '65e2f8abf6f2ce68',
-        OVH_APP_SECRET: '2e3ded007bb6d92d5201efebc6a19b7c',
-        OVH_CONSUMER_KEY: '022556a3828c63319f2864e3a6ea0e02'
+        OVH_APP_KEY: process.env.OVH_APP_KEY || 'test-app-key',
+        OVH_APP_SECRET: process.env.OVH_APP_SECRET || 'test-app-secret',
+        OVH_CONSUMER_KEY: process.env.OVH_CONSUMER_KEY || 'test-consumer-key'
     },
     stdio: ['pipe', 'pipe', 'pipe']
 });
@@ -178,3 +178,4 @@ setTimeout(() => {
     rl.close();
     process.exit(0);
 }, 30000);
+

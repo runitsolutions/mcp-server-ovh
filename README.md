@@ -52,7 +52,7 @@ npm install mcp-server-ovh
 ### Build from source
 
 ```bash
-git clone https://github.com/yourusername/mcp-server-ovh.git
+git clone https://github.com/runitsolutions/mcp-server-ovh.git
 cd mcp-server-ovh
 npm install
 npm run build
@@ -182,6 +182,119 @@ List all services associated with the account.
   "arguments": {}
 }
 ```
+
+## 🛠️ IDE Integration
+
+This MCP server can be integrated with various IDEs and editors that support the Model Context Protocol. Below are the instructions for popular IDEs.
+
+### Cursor Integration
+
+Cursor supports MCP servers through the Model Context Protocol. You can add this OVH MCP server to your Cursor configuration.
+
+#### Option 1: Project Configuration
+
+Create a `.cursor/mcp.json` file in your project root:
+
+```json
+{
+  "mcpServers": {
+    "ovh-api": {
+      "command": "npx",
+      "args": ["mcp-server-ovh"],
+      "env": {
+        "OVH_ENDPOINT": "ovh-eu",
+        "OVH_APP_KEY": "your_app_key_here",
+        "OVH_APP_SECRET": "your_app_secret_here",
+        "OVH_CONSUMER_KEY": "your_consumer_key_here"
+      }
+    }
+  }
+}
+```
+
+#### Option 2: Global Configuration
+
+Create a `~/.cursor/mcp.json` file for system-wide access:
+
+```json
+{
+  "mcpServers": {
+    "ovh-api": {
+      "command": "npx",
+      "args": ["mcp-server-ovh"],
+      "env": {
+        "OVH_ENDPOINT": "ovh-eu",
+        "OVH_APP_KEY": "your_app_key_here",
+        "OVH_APP_SECRET": "your_app_secret_here",
+        "OVH_CONSUMER_KEY": "your_consumer_key_here"
+      }
+    }
+  }
+}
+```
+
+### Other IDEs
+
+#### VS Code with MCP Extension
+
+If you're using VS Code with an MCP extension:
+
+1. Install the MCP extension for VS Code
+2. Configure the server in your MCP settings:
+
+```json
+{
+  "server": "ovh-api",
+  "command": "npx",
+  "args": ["mcp-server-ovh"],
+  "env": {
+    "OVH_ENDPOINT": "ovh-eu",
+    "OVH_APP_KEY": "your_app_key_here",
+    "OVH_APP_SECRET": "your_app_secret_here",
+    "OVH_CONSUMER_KEY": "your_consumer_key_here"
+  }
+}
+```
+
+#### Other MCP-Compatible IDEs
+
+For other IDEs that support MCP:
+
+1. Ensure your IDE supports the Model Context Protocol
+2. Configure the server using the command: `npx mcp-server-ovh`
+3. Set the required environment variables for OVH authentication
+
+### Authentication Setup
+
+Before using the MCP server, you need to set up OVH API credentials:
+
+```bash
+# Set environment variables
+export OVH_ENDPOINT="ovh-eu"
+export OVH_APP_KEY="your_app_key"
+export OVH_APP_SECRET="your_app_secret"
+export OVH_CONSUMER_KEY="your_consumer_key"
+```
+
+Or create a `.env` file in your project directory:
+
+```env
+OVH_ENDPOINT=ovh-eu
+OVH_APP_KEY=your_app_key_here
+OVH_APP_SECRET=your_app_secret_here
+OVH_CONSUMER_KEY=your_consumer_key_here
+```
+
+### Usage in IDE
+
+Once configured, you can use the OVH MCP server in your IDE by:
+
+1. **Asking for OVH information**: "What services do I have in OVH?"
+2. **Checking account details**: "Show my OVH account information"
+3. **Billing inquiries**: "What are my recent OVH bills?"
+4. **Service management**: "List all my OVH services"
+
+The AI assistant will automatically use the available OVH tools when relevant to your questions.
 
 ## Development
 
@@ -322,6 +435,77 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - [OVH API](https://api.ovh.com/) - OVH's official API documentation
 - [MCP SDK](https://github.com/modelcontextprotocol/typescript-sdk) - The SDK used to build this server
 - [GitHub Repository](https://github.com/runitsolutions/mcp-server-ovh) - Source code and issues
+
+---
+
+## 🔧 Troubleshooting
+
+### Common Issues
+
+#### Authentication Problems
+- **Error**: "OVH client not initialized"
+- **Solution**: Ensure all required environment variables are set
+- **Check**: Verify your API credentials are correct and have proper permissions
+
+#### Connection Issues
+- **Error**: Network timeout or connection failed
+- **Solution**: Check your internet connection and OVH endpoint configuration
+- **Check**: Verify the OVH_ENDPOINT matches your account region
+
+#### Permission Errors
+- **Error**: API access denied
+- **Solution**: Ensure your API keys have the necessary permissions
+- **Check**: Review OVH Manager API key permissions
+
+### Debug Mode
+
+Enable debug logging by setting the environment variable:
+
+```bash
+export DEBUG=mcp-server-ovh
+```
+
+### Logs
+
+View MCP server logs in your IDE:
+1. Open the Output panel (usually Ctrl+Shift+U)
+2. Select "MCP Logs" from the dropdown
+3. Check for connection errors, authentication issues, or server crashes
+
+## 📚 Examples
+
+### Basic Usage
+
+```javascript
+// In your MCP-compatible IDE
+// Ask: "What OVH services do I have?"
+// The AI will automatically use the ovh_get_services tool
+
+// Ask: "Show my OVH account information"
+// The AI will use the ovh_get_user_info tool
+
+// Ask: "What are my recent OVH bills?"
+// The AI will use the ovh_get_bills tool
+```
+
+### Advanced Integration
+
+```javascript
+// Custom API calls
+// Ask: "Make a custom API call to /me/service/domain.example.com"
+// The AI will use the ovh_request tool with appropriate parameters
+```
+
+## 📞 Support
+
+- 🐛 [Report Issues](https://github.com/runitsolutions/mcp-server-ovh/issues)
+- 💬 [Discussions](https://github.com/runitsolutions/mcp-server-ovh/discussions)
+- 📖 [OVH API Documentation](https://api.ovh.com/)
+- 🏢 [RunIT Solutions](https://runitcr.com)
+
+## 📄 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
 ---
 

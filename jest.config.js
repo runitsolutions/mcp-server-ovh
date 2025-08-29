@@ -15,6 +15,19 @@ module.exports = {
     '^.+\\.(js|ts)$': 'babel-jest'
   },
 
+  // Handle ES modules
+  extensionsToTreatAsEsm: ['.ts'],
+  globals: {
+    'ts-jest': {
+      useESM: true
+    }
+  },
+
+  // Transform ignore patterns for node_modules
+  transformIgnorePatterns: [
+    'node_modules/(?!(@modelcontextprotocol|@ovhcloud)/)'
+  ],
+
   // File extensions to process
   moduleFileExtensions: ['js', 'ts', 'json'],
 

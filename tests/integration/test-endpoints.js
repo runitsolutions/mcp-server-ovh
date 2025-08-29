@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
-const { OvhMcpServer } = require('./dist/index.js');
+const path = require('path');
+const { OvhMcpServer } = require(path.join(__dirname, '../../dist/index.js'));
 
 async function testEndpoints() {
   const server = new OvhMcpServer();

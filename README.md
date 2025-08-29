@@ -294,14 +294,15 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ## Support
 
 - 📖 [OVH API Documentation](https://api.ovh.com/)
-- 🐛 [Report Issues](https://github.com/yourusername/mcp-server-ovh/issues)
-- 💬 [Discussions](https://github.com/yourusername/mcp-server-ovh/discussions)
+- 🐛 [Report Issues](https://github.com/caco26i/mcp-server-ovh/issues)
+- 💬 [Discussions](https://github.com/caco26i/mcp-server-ovh/discussions)
 
 ## Related Projects
 
 - [Model Context Protocol](https://modelcontextprotocol.io/) - The protocol this server implements
 - [OVH API](https://api.ovh.com/) - OVH's official API documentation
 - [MCP SDK](https://github.com/modelcontextprotocol/typescript-sdk) - The SDK used to build this server
+- [GitHub Repository](https://github.com/caco26i/mcp-server-ovh) - Source code and issues
 
 ---
 

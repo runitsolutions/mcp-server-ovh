@@ -5,6 +5,10 @@ const { z } = require("zod");
 const dotenv = require("dotenv");
 // Types are available but not currently used in this file
 
+// Type definitions
+/** @typedef {import("@modelcontextprotocol/sdk/server/index.js").Server} Server */
+/** @typedef {import("@modelcontextprotocol/sdk/server/stdio.js").StdioServerTransport} StdioServerTransport */
+
 // Dynamic require to avoid TypeScript issues
 let ovh: any;
 
@@ -31,7 +35,7 @@ const MakeRequestSchema = z.object({
 });
 
 class OvhMcpServer {
-    server: Server;
+    server: any;
     ovhClient: any;
 
     constructor() {

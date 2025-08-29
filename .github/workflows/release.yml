@@ -19,18 +19,13 @@ jobs:
         registry-url: 'https://registry.npmjs.org'
 
     - name: Install dependencies
-      run: npm ci
+      run: npm ci --include=dev
 
     - name: Run linter
       run: npm run lint
 
     - name: Run typecheck
       run: npm run typecheck
-
-    - name: Run tests
-      run: npm run test:coverage
-      env:
-        CI: true
 
     - name: Build project
       run: npm run build

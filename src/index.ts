@@ -267,7 +267,14 @@ class OvhMcpServer {
             };
         } catch (error) {
             const errorMessage = error instanceof Error ? error.message : String(error);
-            throw new Error(`OVH API request failed: ${errorMessage}`);
+            return {
+                content: [
+                    {
+                        type: "text",
+                        text: `Error: OVH API request failed: ${errorMessage}`
+                    }
+                ]
+            };
         }
     }
 
@@ -292,7 +299,9 @@ class OvhMcpServer {
                     throw new Error(`Unknown tool: ${toolName}`);
             }
 
-            const result = await this.ovhClient.requestPromised('GET', path);
+            const result = await this.ovhClient.requestPromised('GET', path).catch((error) => {
+                throw new Error(`OVH API request failed: ${error.message || error}`);
+            });
 
             return {
                 content: [
@@ -304,7 +313,14 @@ class OvhMcpServer {
             };
         } catch (error) {
             const errorMessage = error instanceof Error ? error.message : String(error);
-            throw new Error(`Failed to execute ${toolName}: ${errorMessage}`);
+            return {
+                content: [
+                    {
+                        type: "text",
+                        text: `Error: Failed to execute ${toolName}: ${errorMessage}`
+                    }
+                ]
+            };
         }
     }
 

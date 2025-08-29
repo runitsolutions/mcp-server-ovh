@@ -1,12 +1,13 @@
 {
   "name": "mcp-server-ovh",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "MCP server for OVH API integration with standardized tool access",
   "main": "dist/index.js",
   "bin": {
-    "mcp-server-ovh": "dist/index.js"
+    "mcp-server-ovh": "bin/mcp-server-ovh"
   },
   "files": [
+    "bin",
     "dist",
     "README.md"
   ],

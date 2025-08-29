@@ -465,35 +465,71 @@ npm run lint
 # Fix linting issues
 npm run lint:fix
 
-# Run tests
-npm test
+# Run tests (organized by type)
+npm test                    # All tests
+npm run test:unit          # Unit tests
+npm run test:integration   # Integration tests
+npm run test:e2e           # End-to-end tests
 
-# Run tests in watch mode
-npm run test:watch
+# Specific tests
+npm run test:endpoints     # Verify OVH endpoints
+npm run test:server        # MCP server tests
+npm run test:client        # MCP client tests
+npm run test:full          # Complete integration tests
+
+# Coverage and watch mode
+npm run test:coverage      # Tests with coverage report
+npm run test:watch         # Tests in watch mode
 
 # Clean build artifacts
 npm run clean
 ```
 
-### Testing
+### Testing Structure
 
-The project includes comprehensive tests covering:
+The test suite is organized in 4 levels:
 
-- Input validation schemas
-- Server initialization
-- Tool registration
+#### 📁 `tests/unit/` - Unit Tests
+- Zod schema validation
+- MCP server functions
 - Error handling
-- API interactions (mocked)
+- Response parsing
+
+#### 📁 `tests/integration/` - Integration Tests
+- OVH API connectivity
+- Endpoint verification (17/17 ✅)
+- Client-server communication
+- Authentication
+
+#### 📁 `tests/e2e/` - End-to-End Tests
+- Complete initialization flow
+- Full MCP communication
+- Real tool calls
+- Response handling
+
+#### 📁 `tests/utils/` - Utilities
+- Test configuration
+- Common helpers
+- Mock clients
+
+### Run Tests
 
 ```bash
-# Run all tests
-npm test
+# All organized tests
+npm test                    # Complete suite
+npm run test:unit          # Unit tests only
+npm run test:integration   # Integration tests only
+npm run test:e2e           # End-to-end tests only
 
-# Run tests with coverage
-npm test -- --coverage
+# Tests by specific functionality
+npm run test:endpoints     # Verify 17 OVH endpoints
+npm run test:server        # Server functionality
+npm run test:client        # MCP client
+npm run test:full          # Complete integration
 
-# Run specific test file
-npm test -- server.test.ts
+# With coverage and watch
+npm run test:coverage      # Coverage report
+npm run test:watch         # Watch mode
 ```
 
 ### Code Quality

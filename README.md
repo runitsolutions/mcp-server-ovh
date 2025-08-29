@@ -5,6 +5,7 @@
 [![Node.js](https://img.shields.io/badge/Node.js-18+-green.svg)](https://nodejs.org/)
 [![CI](https://github.com/runitsolutions/mcp-server-ovh/actions/workflows/ci.yml/badge.svg)](https://github.com/runitsolutions/mcp-server-ovh/actions/workflows/ci.yml)
 [![Coverage](https://codecov.io/gh/runitsolutions/mcp-server-ovh/branch/main/graph/badge.svg)](https://codecov.io/gh/runitsolutions/mcp-server-ovh)
+[![npm version](https://img.shields.io/npm/v/mcp-server-ovh.svg)](https://www.npmjs.com/package/mcp-server-ovh)
 
 A Model Context Protocol (MCP) server that provides standardized access to OVH API services. This server enables AI assistants and applications to interact with OVH's cloud infrastructure through a unified, secure interface.
 

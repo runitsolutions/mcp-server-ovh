@@ -1,99 +1,128 @@
-import { InitializeClientSchema, InitializeOAuth2Schema, MakeRequestSchema } from '../index.js';
+import {
+  InitializeClientSchema,
+  InitializeOAuth2Schema,
+  MakeRequestSchema
+} from '../index';
 
-describe('Input Validation', () => {
-    describe('InitializeClientSchema', () => {
-        it('should validate valid client initialization data', () => {
-            const validData = {
-                endpoint: "ovh-eu" as const,
-                appKey: "test-app-key",
-                appSecret: "test-app-secret",
-                consumerKey: "test-consumer-key"
-            };
+describe('Input Validation Schemas', () => {
+  describe('InitializeClientSchema', () => {
+    it('should accept valid OVH client initialization data', () => {
+      const validData = {
+        endpoint: 'ovh-eu',
+        appKey: 'test-app-key',
+        appSecret: 'test-app-secret',
+        consumerKey: 'test-consumer-key'
+      };
 
-            expect(() => InitializeClientSchema.parse(validData)).not.toThrow();
-        });
-
-        it('should reject invalid endpoint', () => {
-            const invalidData = {
-                endpoint: "invalid-endpoint",
-                appKey: "test-app-key",
-                appSecret: "test-app-secret",
-                consumerKey: "test-consumer-key"
-            };
-
-            expect(() => InitializeClientSchema.parse(invalidData)).toThrow();
-        });
-
-        it('should reject empty strings', () => {
-            const invalidData = {
-                endpoint: "ovh-eu" as const,
-                appKey: "",
-                appSecret: "test-app-secret",
-                consumerKey: "test-consumer-key"
-            };
-
-            expect(() => InitializeClientSchema.parse(invalidData)).toThrow();
-        });
+      const result = InitializeClientSchema.parse(validData);
+      expect(result).toEqual(validData);
     });
 
-    describe('InitializeOAuth2Schema', () => {
-        it('should validate valid OAuth2 initialization data', () => {
-            const validData = {
-                endpoint: "ovh-eu" as const,
-                clientID: "test-client-id",
-                clientSecret: "test-client-secret"
-            };
+    it('should accept all valid endpoints', () => {
+      const endpoints = [
+        'ovh-eu', 'ovh-us', 'ovh-ca',
+        'soyoustart-eu', 'soyoustart-ca',
+        'kimsufi-eu', 'kimsufi-ca'
+      ];
 
-            expect(() => InitializeOAuth2Schema.parse(validData)).not.toThrow();
-        });
+      endpoints.forEach(endpoint => {
+        const data = {
+          endpoint,
+          appKey: 'test-key',
+          appSecret: 'test-secret',
+          consumerKey: 'test-consumer'
+        };
 
-        it('should reject invalid OAuth2 endpoint', () => {
-            const invalidData = {
-                endpoint: "soyoustart-eu" as const,
-                clientID: "test-client-id",
-                clientSecret: "test-client-secret"
-            };
-
-            expect(() => InitializeOAuth2Schema.parse(invalidData)).toThrow();
-        });
+        expect(() => InitializeClientSchema.parse(data)).not.toThrow();
+      });
     });
 
-    describe('MakeRequestSchema', () => {
-        it('should validate valid request data', () => {
-            const validData = {
-                method: "GET" as const,
-                path: "/me",
-                data: { test: "value" }
-            };
+    it('should reject empty app key', () => {
+      const invalidData = {
+        endpoint: 'ovh-eu',
+        appKey: '',
+        appSecret: 'test-secret',
+        consumerKey: 'test-consumer'
+      };
 
-            expect(() => MakeRequestSchema.parse(validData)).not.toThrow();
-        });
-
-        it('should validate request without data', () => {
-            const validData = {
-                method: "GET" as const,
-                path: "/me"
-            };
-
-            expect(() => MakeRequestSchema.parse(validData)).not.toThrow();
-        });
-
-        it('should reject invalid HTTP method', () => {
-            const invalidData = {
-                method: "PATCH" as any,
-                path: "/me"
-            };
-
-            expect(() => MakeRequestSchema.parse(invalidData)).toThrow();
-        });
-
-        it('should reject empty path', () => {
-            const invalidData = {
-                method: "GET" as const,
-                path: ""
-            };
-
-            expect(() => MakeRequestSchema.parse(invalidData)).toThrow();
-        });
+      expect(() => InitializeClientSchema.parse(invalidData)).toThrow();
     });
+
+    it('should reject invalid endpoint', () => {
+      const invalidData = {
+        endpoint: 'invalid-endpoint',
+        appKey: 'test-key',
+        appSecret: 'test-secret',
+        consumerKey: 'test-consumer'
+      };
+
+      expect(() => InitializeClientSchema.parse(invalidData)).toThrow();
+    });
+  });
+
+  describe('InitializeOAuth2Schema', () => {
+    it('should accept valid OAuth2 initialization data', () => {
+      const validData = {
+        endpoint: 'ovh-eu',
+        clientID: 'test-client-id',
+        clientSecret: 'test-client-secret'
+      };
+
+      const result = InitializeOAuth2Schema.parse(validData);
+      expect(result).toEqual(validData);
+    });
+
+    it('should reject OAuth2 endpoints that are not supported', () => {
+      const invalidData = {
+        endpoint: 'soyoustart-eu', // Not supported for OAuth2
+        clientID: 'test-client-id',
+        clientSecret: 'test-client-secret'
+      };
+
+      expect(() => InitializeOAuth2Schema.parse(invalidData)).toThrow();
+    });
+  });
+
+  describe('MakeRequestSchema', () => {
+    it('should accept valid request data', () => {
+      const validData = {
+        method: 'GET',
+        path: '/me',
+        data: { test: 'data' }
+      };
+
+      const result = MakeRequestSchema.parse(validData);
+      expect(result).toEqual(validData);
+    });
+
+    it('should accept request without optional data', () => {
+      const validData = {
+        method: 'POST',
+        path: '/me/bill'
+      };
+
+      const result = MakeRequestSchema.parse(validData);
+      expect(result.method).toBe('POST');
+      expect(result.path).toBe('/me/bill');
+      expect(result.data).toBeUndefined();
+    });
+
+    it('should reject empty path', () => {
+      const invalidData = {
+        method: 'GET',
+        path: ''
+      };
+
+      expect(() => MakeRequestSchema.parse(invalidData)).toThrow();
+    });
+
+    it('should reject invalid HTTP method', () => {
+      const invalidData = {
+        method: 'INVALID',
+        path: '/me'
+      };
+
+      expect(() => MakeRequestSchema.parse(invalidData)).toThrow();
+    });
+  });
 });

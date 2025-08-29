@@ -1,109 +1,195 @@
-import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
-import { z } from "zod";
-import * as dotenv from "dotenv";
-import type { OvhClient, OvhEndpoint, HttpMethod, OvhUserInfo, OvhBill, OvhService } from "./types/ovh.js";
+const { Server } = require("@modelcontextprotocol/sdk/server/index.js");
+const { StdioServerTransport } = require("@modelcontextprotocol/sdk/server/stdio.js");
+const { CallToolRequestSchema, ListToolsRequestSchema } = require("@modelcontextprotocol/sdk/types.js");
+const { z } = require("zod");
+const dotenv = require("dotenv");
+// Types are available but not currently used in this file
 
-// Dynamic import to avoid TypeScript issues
+// Dynamic require to avoid TypeScript issues
 let ovh: any;
 
-dotenv.config();
+dotenv.config({ path: '.env' });
 
 // Input validation schemas
-export const InitializeClientSchema = z.object({
+const InitializeClientSchema = z.object({
     endpoint: z.enum(["ovh-eu", "ovh-us", "ovh-ca", "soyoustart-eu", "soyoustart-ca", "kimsufi-eu", "kimsufi-ca"]),
     appKey: z.string().min(1),
     appSecret: z.string().min(1),
     consumerKey: z.string().min(1),
 });
 
-export const InitializeOAuth2Schema = z.object({
+const InitializeOAuth2Schema = z.object({
     endpoint: z.enum(["ovh-eu", "ovh-us", "ovh-ca"]),
     clientID: z.string().min(1),
     clientSecret: z.string().min(1),
 });
 
-export const MakeRequestSchema = z.object({
+const MakeRequestSchema = z.object({
     method: z.enum(["GET", "POST", "PUT", "DELETE"]),
     path: z.string().min(1),
     data: z.record(z.any()).optional(),
 });
 
-export class OvhMcpServer {
-    server: McpServer;
-    ovhClient: OvhClient | null;
+class OvhMcpServer {
+    server: Server;
+    ovhClient: any;
 
     constructor() {
-        this.server = new McpServer({
-            name: "ovh-mcp-server",
-            version: "1.0.0",
-        });
+        this.server = new Server(
+            {
+                name: "ovh-mcp-server",
+                version: "1.0.0",
+            },
+            {
+                capabilities: {
+                    tools: {},
+                },
+            }
+        );
         this.ovhClient = null;
         this.setupTools();
         this.setupErrorHandling();
     }
 
-    setupTools() {
-        // Register tools using the modern McpServer API
-        this.server.registerTool(
-            "ovh_initialize_client",
-            {
-                title: "Initialize OVH Client",
+        setupTools() {
+        this.server.setRequestHandler(ListToolsRequestSchema, async () => {
+            return {
+                tools: [
+                    {
+                        name: "ovh_initialize_client",
                         description: "Initialize OVH API client with credentials",
-                inputSchema: InitializeClientSchema
-            },
-            async (args) => await this.initializeClient(args)
-        );
-
-        this.server.registerTool(
-            "ovh_oauth2_initialize",
-            {
-                title: "Initialize OVH OAuth2 Client",
+                        inputSchema: {
+                            type: "object",
+                            properties: {
+                                endpoint: {
+                                    type: "string",
+                                    description: "OVH API endpoint (ovh-eu, ovh-us, ovh-ca, etc.)",
+                                    enum: ["ovh-eu", "ovh-us", "ovh-ca", "soyoustart-eu", "soyoustart-ca", "kimsufi-eu", "kimsufi-ca"]
+                                },
+                                appKey: {
+                                    type: "string",
+                                    description: "Application key from OVH"
+                                },
+                                appSecret: {
+                                    type: "string",
+                                    description: "Application secret from OVH"
+                                },
+                                consumerKey: {
+                                    type: "string",
+                                    description: "Consumer key from OVH"
+                                }
+                            },
+                            required: ["endpoint", "appKey", "appSecret", "consumerKey"]
+                        }
+                    },
+                    {
+                        name: "ovh_oauth2_initialize",
                         description: "Initialize OVH API client with OAuth2 credentials",
-                inputSchema: InitializeOAuth2Schema
-            },
-            async (args) => await this.initializeOAuth2(args)
-        );
-
-        this.server.registerTool(
-            "ovh_request",
-            {
-                title: "Make OVH API Request",
+                        inputSchema: {
+                            type: "object",
+                            properties: {
+                                endpoint: {
+                                    type: "string",
+                                    description: "OVH API endpoint",
+                                    enum: ["ovh-eu", "ovh-us", "ovh-ca"]
+                                },
+                                clientID: {
+                                    type: "string",
+                                    description: "OAuth2 client ID"
+                                },
+                                clientSecret: {
+                                    type: "string",
+                                    description: "OAuth2 client secret"
+                                }
+                            },
+                            required: ["endpoint", "clientID", "clientSecret"]
+                        }
+                    },
+                    {
+                        name: "ovh_request",
                         description: "Make a request to OVH API",
-                inputSchema: MakeRequestSchema
-            },
-            async (args) => await this.makeRequest(args)
-        );
-
-        this.server.registerTool(
-            "ovh_get_user_info",
-            {
-                title: "Get User Information",
+                        inputSchema: {
+                            type: "object",
+                            properties: {
+                                method: {
+                                    type: "string",
+                                    description: "HTTP method (GET, POST, PUT, DELETE)",
+                                    enum: ["GET", "POST", "PUT", "DELETE"]
+                                },
+                                path: {
+                                    type: "string",
+                                    description: "API path (e.g., /me, /me/bill, /sms)"
+                                },
+                                data: {
+                                    type: "object",
+                                    description: "Request data for POST/PUT requests"
+                                }
+                            },
+                            required: ["method", "path"]
+                        }
+                    },
+                    {
+                        name: "ovh_get_user_info",
                         description: "Get current user information",
-                inputSchema: z.object({})
+                        inputSchema: {
+                            type: "object",
+                            properties: {}
+                        }
                     },
-            async () => await this.getUserInfo()
-        );
-
-        this.server.registerTool(
-            "ovh_get_bills",
                     {
-                title: "Get User Bills",
+                        name: "ovh_get_bills",
                         description: "Get user bills",
-                inputSchema: z.object({})
+                        inputSchema: {
+                            type: "object",
+                            properties: {}
+                        }
                     },
-            async () => await this.getBills()
-        );
-
-        this.server.registerTool(
-            "ovh_get_services",
                     {
-                title: "Get User Services",
+                        name: "ovh_get_services",
                         description: "Get user services",
-                inputSchema: z.object({})
-            },
-            async () => await this.getServices()
-        );
+                        inputSchema: {
+                            type: "object",
+                            properties: {}
+                        }
+                    }
+                ]
+            };
+        });
+
+        this.server.setRequestHandler(CallToolRequestSchema, async (request) => {
+            const { name, arguments: args } = request.params;
+
+            try {
+                // Validate arguments using Zod schemas
+                switch (name) {
+                    case "ovh_initialize_client":
+                        InitializeClientSchema.parse(args);
+                        return await this.initializeClient(args);
+                    case "ovh_oauth2_initialize":
+                        InitializeOAuth2Schema.parse(args);
+                        return await this.initializeOAuth2(args);
+                    case "ovh_request":
+                        MakeRequestSchema.parse(args);
+                        return await this.makeRequest(args);
+                    case "ovh_get_user_info":
+                    case "ovh_get_bills":
+                    case "ovh_get_services":
+                        return await this.handleSimpleRequest(name);
+                    default:
+                        throw new Error(`Unknown tool: ${name}`);
+                }
+            } catch (error) {
+                const errorMessage = error instanceof Error ? error.message : String(error);
+                return {
+                    content: [
+                        {
+                            type: "text",
+                            text: `Error: ${errorMessage}`
+                        }
+                    ]
+                };
+            }
+        });
     }
 
     setupErrorHandling() {
@@ -116,11 +202,11 @@ export class OvhMcpServer {
         });
     }
 
-    async initializeClient(args: z.infer<typeof InitializeClientSchema>) {
+        async initializeClient(args: any) {
         if (!ovh) {
-            ovh = await import('ovh');
+            ovh = require('@ovhcloud/node-ovh');
         }
-        
+
         this.ovhClient = ovh({
             endpoint: args.endpoint,
             appKey: args.appKey,
@@ -138,11 +224,11 @@ export class OvhMcpServer {
         };
     }
 
-    async initializeOAuth2(args: z.infer<typeof InitializeOAuth2Schema>) {
+    async initializeOAuth2(args: any) {
         if (!ovh) {
-            ovh = await import('ovh');
+            ovh = require('@ovhcloud/node-ovh');
         }
-        
+
         this.ovhClient = ovh({
             endpoint: args.endpoint,
             clientID: args.clientID,
@@ -159,91 +245,62 @@ export class OvhMcpServer {
         };
     }
 
-    async makeRequest(args: z.infer<typeof MakeRequestSchema>) {
+    async makeRequest(args: any) {
         if (!this.ovhClient) {
             throw new Error("OVH client not initialized. Please call ovh_initialize_client first.");
         }
 
         try {
             const result = await this.ovhClient.requestPromised(args.method, args.path, args.data);
-        
-        return {
-            content: [
-                {
-                    type: "text",
-                    text: JSON.stringify(result, null, 2)
-                }
-            ]
-        };
+
+            return {
+                content: [
+                    {
+                        type: "text",
+                        text: JSON.stringify(result, null, 2)
+                    }
+                ]
+            };
         } catch (error) {
             const errorMessage = error instanceof Error ? error.message : String(error);
             throw new Error(`OVH API request failed: ${errorMessage}`);
         }
     }
 
-    async getUserInfo() {
+    async handleSimpleRequest(toolName: string) {
         if (!this.ovhClient) {
             throw new Error("OVH client not initialized. Please call ovh_initialize_client first.");
         }
 
         try {
-        const userInfo = await this.ovhClient.requestPromised('GET', '/me');
-        
-        return {
-            content: [
-                {
-                    type: "text",
-                    text: JSON.stringify(userInfo, null, 2)
-                }
-            ]
-        };
+            let path: string;
+            switch (toolName) {
+                case "ovh_get_user_info":
+                    path = "/me";
+                    break;
+                case "ovh_get_bills":
+                    path = "/me/bill";
+                    break;
+                case "ovh_get_services":
+                    path = "/me/service";
+                    break;
+                default:
+                    throw new Error(`Unknown tool: ${toolName}`);
+            }
+
+            const result = await this.ovhClient.requestPromised('GET', path);
+
+            return {
+                content: [
+                    {
+                        type: "text",
+                        text: JSON.stringify(result, null, 2)
+                    }
+                ]
+            };
         } catch (error) {
             const errorMessage = error instanceof Error ? error.message : String(error);
-            throw new Error(`Failed to get user info: ${errorMessage}`);
-        }
-    }
-
-    async getBills() {
-        if (!this.ovhClient) {
-            throw new Error("OVH client not initialized. Please call ovh_initialize_client first.");
-        }
-
-        try {
-        const bills = await this.ovhClient.requestPromised('GET', '/me/bill');
-        
-        return {
-            content: [
-                {
-                    type: "text",
-                    text: JSON.stringify(bills, null, 2)
-                }
-            ]
-        };
-        } catch (error) {
-            const errorMessage = error instanceof Error ? error.message : String(error);
-            throw new Error(`Failed to get bills: ${errorMessage}`);
-        }
-    }
-
-    async getServices() {
-        if (!this.ovhClient) {
-            throw new Error("OVH client not initialized. Please call ovh_initialize_client first.");
-        }
-
-        try {
-        const services = await this.ovhClient.requestPromised('GET', '/me/service');
-        
-        return {
-            content: [
-                {
-                    type: "text",
-                    text: JSON.stringify(services, null, 2)
-                }
-            ]
-        };
-        } catch (error) {
-            const errorMessage = error instanceof Error ? error.message : String(error);
-            throw new Error(`Failed to get services: ${errorMessage}`);
+            throw new Error(`Failed to execute ${toolName}: ${errorMessage}`);
         }
     }
 
@@ -255,4 +312,16 @@ export class OvhMcpServer {
 }
 
 const server = new OvhMcpServer();
-server.start().catch(console.error);
+
+// Export for external usage
+module.exports = {
+    OvhMcpServer,
+    InitializeClientSchema,
+    InitializeOAuth2Schema,
+    MakeRequestSchema
+};
+
+// Start server if run directly
+if (require.main === module) {
+    server.start().catch(console.error);
+}

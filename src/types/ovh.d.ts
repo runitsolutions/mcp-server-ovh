@@ -1,4 +1,4 @@
-declare module 'ovh' {
+declare module '@ovhcloud/node-ovh' {
     interface OvhConfig {
         endpoint: string;
         appKey?: string;
@@ -14,7 +14,14 @@ declare module 'ovh' {
     }
 
     function ovh(config: OvhConfig): OvhClient;
+
+    export default ovh;
     export = ovh;
+}
+
+// Also declare for CommonJS compatibility
+declare module 'ovh' {
+    export = require('@ovhcloud/node-ovh');
 }
 
 // OVH API Response Types

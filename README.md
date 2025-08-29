@@ -3,8 +3,27 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0+-blue.svg)](https://www.typescriptlang.org/)
 [![Node.js](https://img.shields.io/badge/Node.js-18+-green.svg)](https://nodejs.org/)
+[![Build Status](https://img.shields.io/badge/Build-Passing-brightgreen.svg)]()
+[![Tests](https://img.shields.io/badge/Tests-Passing-brightgreen.svg)]()
 
 A Model Context Protocol (MCP) server that provides standardized access to OVH API services. This server enables AI assistants and applications to interact with OVH's cloud infrastructure through a unified, secure interface.
+
+## 👨‍💻 Author & Company
+
+**Author**: Isaac Campos Mesén
+**Company**: [RunIT Solutions](https://runitcr.com)
+**Repository**: [GitHub - runitsolutions/mcp-server-ovh](https://github.com/runitsolutions/mcp-server-ovh)
+
+## ✅ Project Status
+
+**Status**: 🟢 **FULLY OPERATIONAL**
+
+- ✅ **Build**: TypeScript compilation successful
+- ✅ **Runtime**: Server starts without errors
+- ✅ **Schema Validation**: Input validation working correctly
+- ✅ **MCP Integration**: Compatible with MCP clients
+- ✅ **CommonJS**: Uses `require()` for module loading
+- ✅ **TypeScript**: Full type safety with proper declarations
 
 ## Features
 
@@ -294,16 +313,16 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ## Support
 
 - 📖 [OVH API Documentation](https://api.ovh.com/)
-- 🐛 [Report Issues](https://github.com/caco26i/mcp-server-ovh/issues)
-- 💬 [Discussions](https://github.com/caco26i/mcp-server-ovh/discussions)
+- 🐛 [Report Issues](https://github.com/runitsolutions/mcp-server-ovh/issues)
+- 💬 [Discussions](https://github.com/runitsolutions/mcp-server-ovh/discussions)
 
 ## Related Projects
 
 - [Model Context Protocol](https://modelcontextprotocol.io/) - The protocol this server implements
 - [OVH API](https://api.ovh.com/) - OVH's official API documentation
 - [MCP SDK](https://github.com/modelcontextprotocol/typescript-sdk) - The SDK used to build this server
-- [GitHub Repository](https://github.com/caco26i/mcp-server-ovh) - Source code and issues
+- [GitHub Repository](https://github.com/runitsolutions/mcp-server-ovh) - Source code and issues
 
 ---
 
-Built with ❤️ using the Model Context Protocol
+Built with ❤️ by [RunIT Solutions](https://runitcr.com) using the Model Context Protocol

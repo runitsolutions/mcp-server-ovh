@@ -38,40 +38,44 @@ jobs:
         OVH_CONSUMER_KEY: ${{ secrets.OVH_CONSUMER_KEY }}
         OVH_ENDPOINT: ovh-us
 
+    - name: Generate changelog
+      id: changelog
+      run: |
+        # Get the previous tag
+        PREVIOUS_TAG=$(git describe --tags --abbrev=0 HEAD~1 2>/dev/null || echo "")
+
+        if [ -n "$PREVIOUS_TAG" ]; then
+          echo "## Changes since $PREVIOUS_TAG" >> changelog.md
+          echo "" >> changelog.md
+          git log --pretty=format:"- %s (%h)" $PREVIOUS_TAG..HEAD >> changelog.md
+        else
+          echo "## Initial Release" >> changelog.md
+          echo "" >> changelog.md
+          echo "First release of MCP OVH Server with comprehensive API coverage." >> changelog.md
+        fi
+
+        echo "" >> changelog.md
+        echo "### 🔍 Verified Endpoints (17/17)" >> changelog.md
+        echo "- User account: /me, /me/bill, /me/payment/method" >> changelog.md
+        echo "- Services: /service, /services, /me/api/application" >> changelog.md
+        echo "- Infrastructure: /dedicated/server, /vps, /cloud/project" >> changelog.md
+        echo "- Network: /ip, /ipLoadbalancing, /vrack" >> changelog.md
+        echo "- Additional: /ssl, /dbaas/logs, /license/windows, /metrics" >> changelog.md
+
+        # Read the generated changelog
+        {
+          echo 'CHANGELOG<<EOF'
+          cat changelog.md
+          echo EOF
+        } >> $GITHUB_OUTPUT
+
     - name: Create Release
-      id: create_release
       uses: actions/create-release@v1
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
-        tag_name: ${{ github.ref }}
-        release_name: Release ${{ github.ref }}
-        body: |
-          ## What's Changed
-
-          ### 🚀 New Features
-          - Complete MCP OVH server with comprehensive endpoint coverage
-          - 17/17 OVH API endpoints verified and working
-          - Enhanced MCP tools for IPs, vRack, load balancers, SSL, and DBaaS logs
-          - Professional test suite with Jest configuration
-          - Full English translation and documentation
-
-          ### 🔒 Security
-          - Removed hardcoded credentials
-          - Environment variable support for secure configuration
-          - Enhanced .gitignore for credential protection
-
-          ### 🛠️ Technical Improvements
-          - TypeScript compilation with proper error handling
-          - ES modules support in Jest configuration
-          - Comprehensive test utilities and helpers
-          - CI/CD pipeline with automated testing
-
-          ### 📊 Verified Endpoints
-          - User account management (/me, /me/bill, /me/payment/method)
-          - Service listings (/service, /services)
-          - Infrastructure (/dedicated/server, /vps, /cloud/project)
-          - Network services (/ip, /ipLoadbalancing, /vrack)
-          - Additional services (/ssl, /dbaas/logs, /license/windows, /metrics)
+        tag_name: ${{ github.ref_name }}
+        release_name: Release ${{ github.ref_name }}
+        body: ${{ steps.changelog.outputs.CHANGELOG }}
         draft: false
         prerelease: false

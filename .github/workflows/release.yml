@@ -89,7 +89,7 @@ jobs:
         npm run typecheck
         npm publish
       env:
-        NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
 
     - name: Create Release
       uses: actions/create-release@v1

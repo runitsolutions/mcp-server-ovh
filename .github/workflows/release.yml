@@ -41,6 +41,11 @@ jobs:
         VERSION=${GITHUB_REF_NAME#v}
         echo "Updating package.json to version $VERSION"
 
+        # Ensure we're on the correct branch
+        git fetch origin main
+        git checkout main
+        git pull origin main --no-edit
+
         # Update package.json version
         npm version $VERSION --no-git-tag-version --no-commit-hooks
 
@@ -49,7 +54,7 @@ jobs:
         git commit -m "chore: Update version to $VERSION [skip ci]"
 
         # Push the version commit
-        git push origin HEAD:main
+        git push origin main
 
     - name: Generate changelog
       id: changelog

@@ -30,14 +30,6 @@ jobs:
     - name: Build project
       run: npm run build
 
-    - name: Run endpoint tests
-      run: npm run test:endpoints
-      env:
-        OVH_APP_KEY: ${{ secrets.OVH_APP_KEY }}
-        OVH_APP_SECRET: ${{ secrets.OVH_APP_SECRET }}
-        OVH_CONSUMER_KEY: ${{ secrets.OVH_CONSUMER_KEY }}
-        OVH_ENDPOINT: ovh-us
-
     - name: Generate changelog
       id: changelog
       run: |

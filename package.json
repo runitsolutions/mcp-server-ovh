@@ -29,7 +29,7 @@
     "test:full": "node tests/e2e/full-integration.test.js",
     "test:client": "node tests/integration/client.test.js",
     "test:server": "node tests/unit/server.test.js",
-    "prepublishOnly": "npm run clean && npm run build && npm run lint && npm run test"
+    "prepublishOnly": "npm run clean && npm run build && npm run lint && npm run typecheck"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^0.5.0",

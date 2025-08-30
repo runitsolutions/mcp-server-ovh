@@ -30,6 +30,22 @@ jobs:
     - name: Build project
       run: npm run build
 
+    - name: Update package.json version
+      run: |
+        # Extract version from tag (remove 'v' prefix)
+        VERSION=${GITHUB_REF_NAME#v}
+        echo "Updating package.json to version $VERSION"
+
+        # Update package.json version
+        npm version $VERSION --no-git-tag-version --no-commit-hooks
+
+        # Commit the version change
+        git add package.json package-lock.json
+        git commit -m "chore: Update version to $VERSION [skip ci]"
+
+        # Push the version commit
+        git push origin HEAD:main
+
     - name: Generate changelog
       id: changelog
       run: |
@@ -54,6 +70,11 @@ jobs:
           cat changelog.md
           echo EOF
         } >> $GITHUB_OUTPUT
+
+    - name: Publish to npm
+      run: npm publish
+      env:
+        NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
     - name: Create Release
       uses: actions/create-release@v1

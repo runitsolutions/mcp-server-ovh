@@ -55,12 +55,6 @@ jobs:
         fi
 
         echo "" >> changelog.md
-        echo "### 🔍 Verified Endpoints (17/17)" >> changelog.md
-        echo "- User account: /me, /me/bill, /me/payment/method" >> changelog.md
-        echo "- Services: /service, /services, /me/api/application" >> changelog.md
-        echo "- Infrastructure: /dedicated/server, /vps, /cloud/project" >> changelog.md
-        echo "- Network: /ip, /ipLoadbalancing, /vrack" >> changelog.md
-        echo "- Additional: /ssl, /dbaas/logs, /license/windows, /metrics" >> changelog.md
 
         # Read the generated changelog
         {

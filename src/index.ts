@@ -34,6 +34,82 @@ const MakeRequestSchema = z.object({
     data: z.record(z.any()).optional(),
 });
 
+// DNS-specific schemas
+const DnsZoneSchema = z.object({
+    zone: z.string().min(1).describe("DNS zone name (e.g., example.com)"),
+});
+
+const DnsRecordFilterSchema = z.object({
+    zone: z.string().min(1).describe("DNS zone name (e.g., example.com)"),
+    fieldType: z.enum(["A", "AAAA", "CNAME", "MX", "TXT", "NS", "SRV", "CAA", "DKIM", "SPF", "DMARC", "LOC", "NAPTR", "PTR", "SSHFP", "TLSA"]).optional().describe("Filter by record type"),
+    subDomain: z.string().optional().describe("Filter by subdomain (empty string for root)"),
+});
+
+const DnsRecordIdSchema = z.object({
+    zone: z.string().min(1).describe("DNS zone name (e.g., example.com)"),
+    recordId: z.number().describe("DNS record ID"),
+});
+
+const CreateDnsRecordSchema = z.object({
+    zone: z.string().min(1).describe("DNS zone name (e.g., example.com)"),
+    fieldType: z.enum(["A", "AAAA", "CNAME", "MX", "TXT", "NS", "SRV", "CAA", "DKIM", "SPF", "DMARC", "LOC", "NAPTR", "PTR", "SSHFP", "TLSA"]).describe("DNS record type"),
+    subDomain: z.string().default("").describe("Subdomain (empty string for root domain)"),
+    target: z.string().min(1).describe("Record value (IP address, hostname, or text)"),
+    ttl: z.number().default(3600).describe("Time to live in seconds (default: 3600)"),
+});
+
+const UpdateDnsRecordSchema = z.object({
+    zone: z.string().min(1).describe("DNS zone name (e.g., example.com)"),
+    recordId: z.number().describe("DNS record ID to update"),
+    subDomain: z.string().optional().describe("New subdomain value"),
+    target: z.string().optional().describe("New target value"),
+    ttl: z.number().optional().describe("New TTL value in seconds"),
+});
+
+// Email-specific schemas
+const EmailDomainSchema = z.object({
+    domain: z.string().min(1).describe("Email domain (e.g., example.com)"),
+});
+
+const EmailAccountSchema = z.object({
+    domain: z.string().min(1).describe("Email domain (e.g., example.com)"),
+    accountName: z.string().min(1).describe("Email account name (without @domain)"),
+});
+
+const CreateEmailAccountSchema = z.object({
+    domain: z.string().min(1).describe("Email domain (e.g., example.com)"),
+    accountName: z.string().min(1).describe("Email account name (without @domain)"),
+    password: z.string().min(8).describe("Password for the email account (min 8 chars)"),
+    description: z.string().optional().describe("Account description"),
+    size: z.number().default(5000000000).describe("Mailbox size in bytes (default: 5GB)"),
+});
+
+const UpdateEmailAccountSchema = z.object({
+    domain: z.string().min(1).describe("Email domain"),
+    accountName: z.string().min(1).describe("Email account name"),
+    description: z.string().optional().describe("New description"),
+    size: z.number().optional().describe("New mailbox size in bytes"),
+});
+
+const ChangeEmailPasswordSchema = z.object({
+    domain: z.string().min(1).describe("Email domain"),
+    accountName: z.string().min(1).describe("Email account name"),
+    password: z.string().min(8).describe("New password (min 8 chars)"),
+});
+
+// Email redirection schemas
+const EmailRedirectionSchema = z.object({
+    domain: z.string().min(1).describe("Email domain (e.g., example.com)"),
+    redirectionId: z.string().min(1).describe("Redirection ID"),
+});
+
+const CreateEmailRedirectionSchema = z.object({
+    domain: z.string().min(1).describe("Email domain (e.g., example.com)"),
+    from: z.string().min(1).describe("Source email address (local part without @domain, or full address)"),
+    to: z.string().email().describe("Destination email address"),
+    localCopy: z.boolean().default(false).describe("Keep a local copy of emails"),
+});
+
 class OvhMcpServer {
     server: any;
     ovhClient: any;
@@ -42,7 +118,7 @@ class OvhMcpServer {
         this.server = new Server(
             {
                 name: "ovh-mcp-server",
-                version: "1.0.0",
+                version: "2.1.0",
             },
             {
                 capabilities: {
@@ -51,8 +127,36 @@ class OvhMcpServer {
             }
         );
         this.ovhClient = null;
+        this.autoInitFromEnv();
         this.setupTools();
         this.setupErrorHandling();
+    }
+
+    // Auto-initialize from environment variables if present
+    autoInitFromEnv() {
+        const endpoint = process.env.OVH_ENDPOINT;
+        const appKey = process.env.OVH_APP_KEY;
+        const appSecret = process.env.OVH_APP_SECRET;
+        const consumerKey = process.env.OVH_CONSUMER_KEY;
+
+        if (endpoint && appKey && appSecret && consumerKey) {
+            try {
+                if (!ovh) {
+                    ovh = require('@ovhcloud/node-ovh');
+                }
+                this.ovhClient = ovh({
+                    endpoint,
+                    appKey,
+                    appSecret,
+                    consumerKey
+                });
+                console.error(`OVH client auto-initialized from environment variables (endpoint: ${endpoint})`);
+            } catch (error) {
+                console.error("Failed to auto-initialize OVH client from env:", error);
+            }
+        } else {
+            console.error("OVH credentials not found in environment. Use ovh_initialize_client to initialize manually.");
+        }
     }
 
         setupTools() {
@@ -235,6 +339,423 @@ class OvhMcpServer {
                             type: "object",
                             properties: {}
                         }
+                    },
+                    // DNS Tools
+                    {
+                        name: "ovh_get_domains",
+                        description: "List all DNS zones in your OVH account",
+                        inputSchema: {
+                            type: "object",
+                            properties: {}
+                        }
+                    },
+                    {
+                        name: "ovh_get_domain_zone",
+                        description: "Get detailed information about a specific DNS zone",
+                        inputSchema: {
+                            type: "object",
+                            properties: {
+                                zone: {
+                                    type: "string",
+                                    description: "DNS zone name (e.g., example.com)"
+                                }
+                            },
+                            required: ["zone"]
+                        }
+                    },
+                    {
+                        name: "ovh_get_dns_records",
+                        description: "List DNS records for a zone with optional filtering by type and subdomain",
+                        inputSchema: {
+                            type: "object",
+                            properties: {
+                                zone: {
+                                    type: "string",
+                                    description: "DNS zone name (e.g., example.com)"
+                                },
+                                fieldType: {
+                                    type: "string",
+                                    description: "Filter by record type",
+                                    enum: ["A", "AAAA", "CNAME", "MX", "TXT", "NS", "SRV", "CAA", "DKIM", "SPF", "DMARC", "LOC", "NAPTR", "PTR", "SSHFP", "TLSA"]
+                                },
+                                subDomain: {
+                                    type: "string",
+                                    description: "Filter by subdomain (empty string for root)"
+                                }
+                            },
+                            required: ["zone"]
+                        }
+                    },
+                    {
+                        name: "ovh_get_dns_record",
+                        description: "Get details of a specific DNS record by ID",
+                        inputSchema: {
+                            type: "object",
+                            properties: {
+                                zone: {
+                                    type: "string",
+                                    description: "DNS zone name (e.g., example.com)"
+                                },
+                                recordId: {
+                                    type: "number",
+                                    description: "DNS record ID"
+                                }
+                            },
+                            required: ["zone", "recordId"]
+                        }
+                    },
+                    {
+                        name: "ovh_create_dns_record",
+                        description: "Create a new DNS record in a zone. Remember to call ovh_refresh_dns_zone after to apply changes.",
+                        inputSchema: {
+                            type: "object",
+                            properties: {
+                                zone: {
+                                    type: "string",
+                                    description: "DNS zone name (e.g., example.com)"
+                                },
+                                fieldType: {
+                                    type: "string",
+                                    description: "DNS record type",
+                                    enum: ["A", "AAAA", "CNAME", "MX", "TXT", "NS", "SRV", "CAA", "DKIM", "SPF", "DMARC", "LOC", "NAPTR", "PTR", "SSHFP", "TLSA"]
+                                },
+                                subDomain: {
+                                    type: "string",
+                                    description: "Subdomain (empty string for root domain)",
+                                    default: ""
+                                },
+                                target: {
+                                    type: "string",
+                                    description: "Record value (IP address, hostname, or text)"
+                                },
+                                ttl: {
+                                    type: "number",
+                                    description: "Time to live in seconds",
+                                    default: 3600
+                                }
+                            },
+                            required: ["zone", "fieldType", "target"]
+                        }
+                    },
+                    {
+                        name: "ovh_update_dns_record",
+                        description: "Update an existing DNS record. Remember to call ovh_refresh_dns_zone after to apply changes.",
+                        inputSchema: {
+                            type: "object",
+                            properties: {
+                                zone: {
+                                    type: "string",
+                                    description: "DNS zone name (e.g., example.com)"
+                                },
+                                recordId: {
+                                    type: "number",
+                                    description: "DNS record ID to update"
+                                },
+                                subDomain: {
+                                    type: "string",
+                                    description: "New subdomain value"
+                                },
+                                target: {
+                                    type: "string",
+                                    description: "New target value"
+                                },
+                                ttl: {
+                                    type: "number",
+                                    description: "New TTL value in seconds"
+                                }
+                            },
+                            required: ["zone", "recordId"]
+                        }
+                    },
+                    {
+                        name: "ovh_delete_dns_record",
+                        description: "Delete a DNS record. Remember to call ovh_refresh_dns_zone after to apply changes.",
+                        inputSchema: {
+                            type: "object",
+                            properties: {
+                                zone: {
+                                    type: "string",
+                                    description: "DNS zone name (e.g., example.com)"
+                                },
+                                recordId: {
+                                    type: "number",
+                                    description: "DNS record ID to delete"
+                                }
+                            },
+                            required: ["zone", "recordId"]
+                        }
+                    },
+                    {
+                        name: "ovh_refresh_dns_zone",
+                        description: "Apply pending DNS changes to a zone. Required after create/update/delete operations.",
+                        inputSchema: {
+                            type: "object",
+                            properties: {
+                                zone: {
+                                    type: "string",
+                                    description: "DNS zone name (e.g., example.com)"
+                                }
+                            },
+                            required: ["zone"]
+                        }
+                    },
+                    {
+                        name: "ovh_get_dns_zone_status",
+                        description: "Get the current status of a DNS zone (propagation status, errors)",
+                        inputSchema: {
+                            type: "object",
+                            properties: {
+                                zone: {
+                                    type: "string",
+                                    description: "DNS zone name (e.g., example.com)"
+                                }
+                            },
+                            required: ["zone"]
+                        }
+                    },
+                    {
+                        name: "ovh_export_dns_zone",
+                        description: "Export DNS zone in BIND format (text file format)",
+                        inputSchema: {
+                            type: "object",
+                            properties: {
+                                zone: {
+                                    type: "string",
+                                    description: "DNS zone name (e.g., example.com)"
+                                }
+                            },
+                            required: ["zone"]
+                        }
+                    },
+                    // Email Tools
+                    {
+                        name: "ovh_get_email_domains",
+                        description: "List all email domains in your OVH account",
+                        inputSchema: {
+                            type: "object",
+                            properties: {}
+                        }
+                    },
+                    {
+                        name: "ovh_get_email_domain",
+                        description: "Get detailed information about a specific email domain",
+                        inputSchema: {
+                            type: "object",
+                            properties: {
+                                domain: {
+                                    type: "string",
+                                    description: "Email domain (e.g., example.com)"
+                                }
+                            },
+                            required: ["domain"]
+                        }
+                    },
+                    {
+                        name: "ovh_get_email_accounts",
+                        description: "List all email accounts for a domain",
+                        inputSchema: {
+                            type: "object",
+                            properties: {
+                                domain: {
+                                    type: "string",
+                                    description: "Email domain (e.g., example.com)"
+                                }
+                            },
+                            required: ["domain"]
+                        }
+                    },
+                    {
+                        name: "ovh_get_email_account",
+                        description: "Get details of a specific email account",
+                        inputSchema: {
+                            type: "object",
+                            properties: {
+                                domain: {
+                                    type: "string",
+                                    description: "Email domain (e.g., example.com)"
+                                },
+                                accountName: {
+                                    type: "string",
+                                    description: "Email account name (without @domain)"
+                                }
+                            },
+                            required: ["domain", "accountName"]
+                        }
+                    },
+                    {
+                        name: "ovh_create_email_account",
+                        description: "Create a new email account",
+                        inputSchema: {
+                            type: "object",
+                            properties: {
+                                domain: {
+                                    type: "string",
+                                    description: "Email domain (e.g., example.com)"
+                                },
+                                accountName: {
+                                    type: "string",
+                                    description: "Email account name (without @domain)"
+                                },
+                                password: {
+                                    type: "string",
+                                    description: "Password for the email account (min 8 chars)"
+                                },
+                                description: {
+                                    type: "string",
+                                    description: "Account description"
+                                },
+                                size: {
+                                    type: "number",
+                                    description: "Mailbox size in bytes (default: 5GB)",
+                                    default: 5000000000
+                                }
+                            },
+                            required: ["domain", "accountName", "password"]
+                        }
+                    },
+                    {
+                        name: "ovh_update_email_account",
+                        description: "Update an email account settings",
+                        inputSchema: {
+                            type: "object",
+                            properties: {
+                                domain: {
+                                    type: "string",
+                                    description: "Email domain"
+                                },
+                                accountName: {
+                                    type: "string",
+                                    description: "Email account name"
+                                },
+                                description: {
+                                    type: "string",
+                                    description: "New description"
+                                },
+                                size: {
+                                    type: "number",
+                                    description: "New mailbox size in bytes"
+                                }
+                            },
+                            required: ["domain", "accountName"]
+                        }
+                    },
+                    {
+                        name: "ovh_change_email_password",
+                        description: "Change password for an email account",
+                        inputSchema: {
+                            type: "object",
+                            properties: {
+                                domain: {
+                                    type: "string",
+                                    description: "Email domain"
+                                },
+                                accountName: {
+                                    type: "string",
+                                    description: "Email account name"
+                                },
+                                password: {
+                                    type: "string",
+                                    description: "New password (min 8 chars)"
+                                }
+                            },
+                            required: ["domain", "accountName", "password"]
+                        }
+                    },
+                    {
+                        name: "ovh_delete_email_account",
+                        description: "Delete an email account",
+                        inputSchema: {
+                            type: "object",
+                            properties: {
+                                domain: {
+                                    type: "string",
+                                    description: "Email domain"
+                                },
+                                accountName: {
+                                    type: "string",
+                                    description: "Email account name"
+                                }
+                            },
+                            required: ["domain", "accountName"]
+                        }
+                    },
+                    // Email Redirection Tools
+                    {
+                        name: "ovh_get_email_redirections",
+                        description: "List all email redirections for a domain",
+                        inputSchema: {
+                            type: "object",
+                            properties: {
+                                domain: {
+                                    type: "string",
+                                    description: "Email domain (e.g., example.com)"
+                                }
+                            },
+                            required: ["domain"]
+                        }
+                    },
+                    {
+                        name: "ovh_get_email_redirection",
+                        description: "Get details of a specific email redirection",
+                        inputSchema: {
+                            type: "object",
+                            properties: {
+                                domain: {
+                                    type: "string",
+                                    description: "Email domain"
+                                },
+                                redirectionId: {
+                                    type: "string",
+                                    description: "Redirection ID"
+                                }
+                            },
+                            required: ["domain", "redirectionId"]
+                        }
+                    },
+                    {
+                        name: "ovh_create_email_redirection",
+                        description: "Create a new email redirection",
+                        inputSchema: {
+                            type: "object",
+                            properties: {
+                                domain: {
+                                    type: "string",
+                                    description: "Email domain (e.g., example.com)"
+                                },
+                                from: {
+                                    type: "string",
+                                    description: "Source email (local part without @domain)"
+                                },
+                                to: {
+                                    type: "string",
+                                    description: "Destination email address"
+                                },
+                                localCopy: {
+                                    type: "boolean",
+                                    description: "Keep a local copy of emails",
+                                    default: false
+                                }
+                            },
+                            required: ["domain", "from", "to"]
+                        }
+                    },
+                    {
+                        name: "ovh_delete_email_redirection",
+                        description: "Delete an email redirection",
+                        inputSchema: {
+                            type: "object",
+                            properties: {
+                                domain: {
+                                    type: "string",
+                                    description: "Email domain"
+                                },
+                                redirectionId: {
+                                    type: "string",
+                                    description: "Redirection ID"
+                                }
+                            },
+                            required: ["domain", "redirectionId"]
+                        }
                     }
                 ]
             };
@@ -268,7 +789,73 @@ class OvhMcpServer {
                     case "ovh_get_load_balancers":
                     case "ovh_get_ssl_certificates":
                     case "ovh_get_dbaas_logs":
+                    case "ovh_get_domains":
                         return await this.handleSimpleRequest(name);
+                    // DNS Tools with arguments
+                    case "ovh_get_domain_zone":
+                        DnsZoneSchema.parse(args);
+                        return await this.getDomainZone(args);
+                    case "ovh_get_dns_records":
+                        DnsRecordFilterSchema.parse(args);
+                        return await this.getDnsRecords(args);
+                    case "ovh_get_dns_record":
+                        DnsRecordIdSchema.parse(args);
+                        return await this.getDnsRecord(args);
+                    case "ovh_create_dns_record":
+                        CreateDnsRecordSchema.parse(args);
+                        return await this.createDnsRecord(args);
+                    case "ovh_update_dns_record":
+                        UpdateDnsRecordSchema.parse(args);
+                        return await this.updateDnsRecord(args);
+                    case "ovh_delete_dns_record":
+                        DnsRecordIdSchema.parse(args);
+                        return await this.deleteDnsRecord(args);
+                    case "ovh_refresh_dns_zone":
+                        DnsZoneSchema.parse(args);
+                        return await this.refreshDnsZone(args);
+                    case "ovh_get_dns_zone_status":
+                        DnsZoneSchema.parse(args);
+                        return await this.getDnsZoneStatus(args);
+                    case "ovh_export_dns_zone":
+                        DnsZoneSchema.parse(args);
+                        return await this.exportDnsZone(args);
+                    // Email Tools
+                    case "ovh_get_email_domains":
+                        return await this.getEmailDomains();
+                    case "ovh_get_email_domain":
+                        EmailDomainSchema.parse(args);
+                        return await this.getEmailDomain(args);
+                    case "ovh_get_email_accounts":
+                        EmailDomainSchema.parse(args);
+                        return await this.getEmailAccounts(args);
+                    case "ovh_get_email_account":
+                        EmailAccountSchema.parse(args);
+                        return await this.getEmailAccount(args);
+                    case "ovh_create_email_account":
+                        CreateEmailAccountSchema.parse(args);
+                        return await this.createEmailAccount(args);
+                    case "ovh_update_email_account":
+                        UpdateEmailAccountSchema.parse(args);
+                        return await this.updateEmailAccount(args);
+                    case "ovh_change_email_password":
+                        ChangeEmailPasswordSchema.parse(args);
+                        return await this.changeEmailPassword(args);
+                    case "ovh_delete_email_account":
+                        EmailAccountSchema.parse(args);
+                        return await this.deleteEmailAccount(args);
+                    // Email Redirection Tools
+                    case "ovh_get_email_redirections":
+                        EmailDomainSchema.parse(args);
+                        return await this.getEmailRedirections(args);
+                    case "ovh_get_email_redirection":
+                        EmailRedirectionSchema.parse(args);
+                        return await this.getEmailRedirection(args);
+                    case "ovh_create_email_redirection":
+                        CreateEmailRedirectionSchema.parse(args);
+                        return await this.createEmailRedirection(args);
+                    case "ovh_delete_email_redirection":
+                        EmailRedirectionSchema.parse(args);
+                        return await this.deleteEmailRedirection(args);
                     default:
                         throw new Error(`Unknown tool: ${name}`);
                 }
@@ -520,6 +1107,10 @@ class OvhMcpServer {
                     path = "/dbaas/logs";
                     operation = "DBaaS Logs services retrieval";
                     break;
+                case "ovh_get_domains":
+                    path = "/domain/zone";
+                    operation = "DNS zones retrieval";
+                    break;
                 default:
                     throw new Error(`Unknown tool: ${toolName}`);
             }
@@ -587,6 +1178,647 @@ class OvhMcpServer {
         }
     }
 
+    // DNS Methods
+    async getDomainZone(args: any) {
+        if (!this.ovhClient) {
+            throw new Error("OVH client not initialized. Please call ovh_initialize_client first.");
+        }
+
+        try {
+            const result = await this.ovhClient.requestPromised('GET', `/domain/zone/${args.zone}`);
+            return {
+                content: [{
+                    type: "text",
+                    text: JSON.stringify(result, null, 2)
+                }]
+            };
+        } catch (error: any) {
+            return this.handleDnsError(error, `get zone ${args.zone}`);
+        }
+    }
+
+    async getDnsRecords(args: any) {
+        if (!this.ovhClient) {
+            throw new Error("OVH client not initialized. Please call ovh_initialize_client first.");
+        }
+
+        try {
+            // Build query parameters
+            const params: string[] = [];
+            if (args.fieldType) params.push(`fieldType=${args.fieldType}`);
+            if (args.subDomain !== undefined) params.push(`subDomain=${encodeURIComponent(args.subDomain)}`);
+
+            const queryString = params.length > 0 ? `?${params.join('&')}` : '';
+            const path = `/domain/zone/${args.zone}/record${queryString}`;
+
+            // Get record IDs
+            const recordIds = await this.ovhClient.requestPromised('GET', path);
+
+            if (!Array.isArray(recordIds) || recordIds.length === 0) {
+                return {
+                    content: [{
+                        type: "text",
+                        text: JSON.stringify({ records: [], count: 0 }, null, 2)
+                    }]
+                };
+            }
+
+            // Fetch details for each record (limit to 50 to avoid timeout)
+            const limitedIds = recordIds.slice(0, 50);
+            const records = await Promise.all(
+                limitedIds.map(async (id: number) => {
+                    try {
+                        return await this.ovhClient.requestPromised('GET', `/domain/zone/${args.zone}/record/${id}`);
+                    } catch (e) {
+                        return { id, error: 'Failed to fetch record details' };
+                    }
+                })
+            );
+
+            const result = {
+                records,
+                count: records.length,
+                totalIds: recordIds.length,
+                truncated: recordIds.length > 50
+            };
+
+            return {
+                content: [{
+                    type: "text",
+                    text: JSON.stringify(result, null, 2)
+                }]
+            };
+        } catch (error: any) {
+            return this.handleDnsError(error, `list records for ${args.zone}`);
+        }
+    }
+
+    async getDnsRecord(args: any) {
+        if (!this.ovhClient) {
+            throw new Error("OVH client not initialized. Please call ovh_initialize_client first.");
+        }
+
+        try {
+            const result = await this.ovhClient.requestPromised('GET', `/domain/zone/${args.zone}/record/${args.recordId}`);
+            return {
+                content: [{
+                    type: "text",
+                    text: JSON.stringify(result, null, 2)
+                }]
+            };
+        } catch (error: any) {
+            return this.handleDnsError(error, `get record ${args.recordId} in ${args.zone}`);
+        }
+    }
+
+    async createDnsRecord(args: any) {
+        if (!this.ovhClient) {
+            throw new Error("OVH client not initialized. Please call ovh_initialize_client first.");
+        }
+
+        try {
+            const data = {
+                fieldType: args.fieldType,
+                subDomain: args.subDomain || '',
+                target: args.target,
+                ttl: args.ttl || 3600
+            };
+
+            const result = await this.ovhClient.requestPromised('POST', `/domain/zone/${args.zone}/record`, data);
+
+            return {
+                content: [{
+                    type: "text",
+                    text: JSON.stringify({
+                        success: true,
+                        message: `DNS record created successfully. Remember to call ovh_refresh_dns_zone to apply changes.`,
+                        record: result
+                    }, null, 2)
+                }]
+            };
+        } catch (error: any) {
+            return this.handleDnsError(error, `create record in ${args.zone}`);
+        }
+    }
+
+    async updateDnsRecord(args: any) {
+        if (!this.ovhClient) {
+            throw new Error("OVH client not initialized. Please call ovh_initialize_client first.");
+        }
+
+        try {
+            // Build update data with only provided fields
+            const data: any = {};
+            if (args.subDomain !== undefined) data.subDomain = args.subDomain;
+            if (args.target !== undefined) data.target = args.target;
+            if (args.ttl !== undefined) data.ttl = args.ttl;
+
+            if (Object.keys(data).length === 0) {
+                return {
+                    content: [{
+                        type: "text",
+                        text: "Error: No fields to update. Provide at least one of: subDomain, target, ttl"
+                    }]
+                };
+            }
+
+            await this.ovhClient.requestPromised('PUT', `/domain/zone/${args.zone}/record/${args.recordId}`, data);
+
+            // Fetch updated record
+            const updated = await this.ovhClient.requestPromised('GET', `/domain/zone/${args.zone}/record/${args.recordId}`);
+
+            return {
+                content: [{
+                    type: "text",
+                    text: JSON.stringify({
+                        success: true,
+                        message: `DNS record updated successfully. Remember to call ovh_refresh_dns_zone to apply changes.`,
+                        record: updated
+                    }, null, 2)
+                }]
+            };
+        } catch (error: any) {
+            return this.handleDnsError(error, `update record ${args.recordId} in ${args.zone}`);
+        }
+    }
+
+    async deleteDnsRecord(args: any) {
+        if (!this.ovhClient) {
+            throw new Error("OVH client not initialized. Please call ovh_initialize_client first.");
+        }
+
+        try {
+            // First get record details for confirmation
+            const record = await this.ovhClient.requestPromised('GET', `/domain/zone/${args.zone}/record/${args.recordId}`);
+
+            await this.ovhClient.requestPromised('DELETE', `/domain/zone/${args.zone}/record/${args.recordId}`);
+
+            return {
+                content: [{
+                    type: "text",
+                    text: JSON.stringify({
+                        success: true,
+                        message: `DNS record deleted successfully. Remember to call ovh_refresh_dns_zone to apply changes.`,
+                        deletedRecord: record
+                    }, null, 2)
+                }]
+            };
+        } catch (error: any) {
+            return this.handleDnsError(error, `delete record ${args.recordId} in ${args.zone}`);
+        }
+    }
+
+    async refreshDnsZone(args: any) {
+        if (!this.ovhClient) {
+            throw new Error("OVH client not initialized. Please call ovh_initialize_client first.");
+        }
+
+        try {
+            await this.ovhClient.requestPromised('POST', `/domain/zone/${args.zone}/refresh`);
+
+            return {
+                content: [{
+                    type: "text",
+                    text: JSON.stringify({
+                        success: true,
+                        message: `DNS zone ${args.zone} refreshed successfully. Changes are now being propagated.`
+                    }, null, 2)
+                }]
+            };
+        } catch (error: any) {
+            return this.handleDnsError(error, `refresh zone ${args.zone}`);
+        }
+    }
+
+    async getDnsZoneStatus(args: any) {
+        if (!this.ovhClient) {
+            throw new Error("OVH client not initialized. Please call ovh_initialize_client first.");
+        }
+
+        try {
+            const result = await this.ovhClient.requestPromised('GET', `/domain/zone/${args.zone}/status`);
+            return {
+                content: [{
+                    type: "text",
+                    text: JSON.stringify(result, null, 2)
+                }]
+            };
+        } catch (error: any) {
+            return this.handleDnsError(error, `get status for ${args.zone}`);
+        }
+    }
+
+    async exportDnsZone(args: any) {
+        if (!this.ovhClient) {
+            throw new Error("OVH client not initialized. Please call ovh_initialize_client first.");
+        }
+
+        try {
+            const result = await this.ovhClient.requestPromised('GET', `/domain/zone/${args.zone}/export`);
+            return {
+                content: [{
+                    type: "text",
+                    text: typeof result === 'string' ? result : JSON.stringify(result, null, 2)
+                }]
+            };
+        } catch (error: any) {
+            return this.handleDnsError(error, `export zone ${args.zone}`);
+        }
+    }
+
+    // Helper method for DNS error handling
+    handleDnsError(error: any, operation: string) {
+        console.error(`DNS operation failed (${operation}):`, error);
+
+        let errorMessage = "Unknown error occurred";
+
+        if (error instanceof Error) {
+            errorMessage = error.message;
+        } else if (typeof error === 'string') {
+            errorMessage = error;
+        } else if (error && typeof error === 'object') {
+            if (error.errorCode) {
+                errorMessage = `OVH API Error ${error.errorCode}: ${error.message || 'Unknown error'}`;
+            } else if (error.message) {
+                errorMessage = error.message;
+            } else {
+                errorMessage = JSON.stringify(error);
+            }
+        }
+
+        return {
+            content: [{
+                type: "text",
+                text: `Error: Failed to ${operation}: ${errorMessage}`
+            }]
+        };
+    }
+
+    // Email Methods
+    async getEmailDomains() {
+        if (!this.ovhClient) {
+            throw new Error("OVH client not initialized. Please call ovh_initialize_client first.");
+        }
+
+        try {
+            const result = await this.ovhClient.requestPromised('GET', '/email/domain');
+            return {
+                content: [{
+                    type: "text",
+                    text: JSON.stringify(result, null, 2)
+                }]
+            };
+        } catch (error: any) {
+            return this.handleEmailError(error, 'list email domains');
+        }
+    }
+
+    async getEmailDomain(args: any) {
+        if (!this.ovhClient) {
+            throw new Error("OVH client not initialized. Please call ovh_initialize_client first.");
+        }
+
+        try {
+            const result = await this.ovhClient.requestPromised('GET', `/email/domain/${args.domain}`);
+            return {
+                content: [{
+                    type: "text",
+                    text: JSON.stringify(result, null, 2)
+                }]
+            };
+        } catch (error: any) {
+            return this.handleEmailError(error, `get domain ${args.domain}`);
+        }
+    }
+
+    async getEmailAccounts(args: any) {
+        if (!this.ovhClient) {
+            throw new Error("OVH client not initialized. Please call ovh_initialize_client first.");
+        }
+
+        try {
+            const accountNames = await this.ovhClient.requestPromised('GET', `/email/domain/${args.domain}/account`);
+
+            if (!Array.isArray(accountNames) || accountNames.length === 0) {
+                return {
+                    content: [{
+                        type: "text",
+                        text: JSON.stringify({ accounts: [], count: 0 }, null, 2)
+                    }]
+                };
+            }
+
+            // Fetch details for each account (limit to 50)
+            const limitedNames = accountNames.slice(0, 50);
+            const accounts = await Promise.all(
+                limitedNames.map(async (name: string) => {
+                    try {
+                        return await this.ovhClient.requestPromised('GET', `/email/domain/${args.domain}/account/${name}`);
+                    } catch (e) {
+                        return { accountName: name, error: 'Failed to fetch account details' };
+                    }
+                })
+            );
+
+            return {
+                content: [{
+                    type: "text",
+                    text: JSON.stringify({
+                        accounts,
+                        count: accounts.length,
+                        total: accountNames.length,
+                        truncated: accountNames.length > 50
+                    }, null, 2)
+                }]
+            };
+        } catch (error: any) {
+            return this.handleEmailError(error, `list accounts for ${args.domain}`);
+        }
+    }
+
+    async getEmailAccount(args: any) {
+        if (!this.ovhClient) {
+            throw new Error("OVH client not initialized. Please call ovh_initialize_client first.");
+        }
+
+        try {
+            const result = await this.ovhClient.requestPromised('GET', `/email/domain/${args.domain}/account/${args.accountName}`);
+            return {
+                content: [{
+                    type: "text",
+                    text: JSON.stringify(result, null, 2)
+                }]
+            };
+        } catch (error: any) {
+            return this.handleEmailError(error, `get account ${args.accountName}@${args.domain}`);
+        }
+    }
+
+    async createEmailAccount(args: any) {
+        if (!this.ovhClient) {
+            throw new Error("OVH client not initialized. Please call ovh_initialize_client first.");
+        }
+
+        try {
+            const data: any = {
+                accountName: args.accountName,
+                password: args.password
+            };
+            if (args.description) data.description = args.description;
+            if (args.size) data.size = args.size;
+
+            const result = await this.ovhClient.requestPromised('POST', `/email/domain/${args.domain}/account`, data);
+
+            return {
+                content: [{
+                    type: "text",
+                    text: JSON.stringify({
+                        success: true,
+                        message: `Email account ${args.accountName}@${args.domain} created successfully`,
+                        result
+                    }, null, 2)
+                }]
+            };
+        } catch (error: any) {
+            return this.handleEmailError(error, `create account ${args.accountName}@${args.domain}`);
+        }
+    }
+
+    async updateEmailAccount(args: any) {
+        if (!this.ovhClient) {
+            throw new Error("OVH client not initialized. Please call ovh_initialize_client first.");
+        }
+
+        try {
+            const data: any = {};
+            if (args.description !== undefined) data.description = args.description;
+            if (args.size !== undefined) data.size = args.size;
+
+            if (Object.keys(data).length === 0) {
+                return {
+                    content: [{
+                        type: "text",
+                        text: "Error: No fields to update. Provide at least one of: description, size"
+                    }]
+                };
+            }
+
+            await this.ovhClient.requestPromised('PUT', `/email/domain/${args.domain}/account/${args.accountName}`, data);
+
+            const updated = await this.ovhClient.requestPromised('GET', `/email/domain/${args.domain}/account/${args.accountName}`);
+
+            return {
+                content: [{
+                    type: "text",
+                    text: JSON.stringify({
+                        success: true,
+                        message: `Email account ${args.accountName}@${args.domain} updated successfully`,
+                        account: updated
+                    }, null, 2)
+                }]
+            };
+        } catch (error: any) {
+            return this.handleEmailError(error, `update account ${args.accountName}@${args.domain}`);
+        }
+    }
+
+    async changeEmailPassword(args: any) {
+        if (!this.ovhClient) {
+            throw new Error("OVH client not initialized. Please call ovh_initialize_client first.");
+        }
+
+        try {
+            await this.ovhClient.requestPromised('POST', `/email/domain/${args.domain}/account/${args.accountName}/changePassword`, {
+                password: args.password
+            });
+
+            return {
+                content: [{
+                    type: "text",
+                    text: JSON.stringify({
+                        success: true,
+                        message: `Password changed successfully for ${args.accountName}@${args.domain}`
+                    }, null, 2)
+                }]
+            };
+        } catch (error: any) {
+            return this.handleEmailError(error, `change password for ${args.accountName}@${args.domain}`);
+        }
+    }
+
+    async deleteEmailAccount(args: any) {
+        if (!this.ovhClient) {
+            throw new Error("OVH client not initialized. Please call ovh_initialize_client first.");
+        }
+
+        try {
+            // Get account details before deletion
+            const account = await this.ovhClient.requestPromised('GET', `/email/domain/${args.domain}/account/${args.accountName}`);
+
+            await this.ovhClient.requestPromised('DELETE', `/email/domain/${args.domain}/account/${args.accountName}`);
+
+            return {
+                content: [{
+                    type: "text",
+                    text: JSON.stringify({
+                        success: true,
+                        message: `Email account ${args.accountName}@${args.domain} deleted successfully`,
+                        deletedAccount: account
+                    }, null, 2)
+                }]
+            };
+        } catch (error: any) {
+            return this.handleEmailError(error, `delete account ${args.accountName}@${args.domain}`);
+        }
+    }
+
+    // Email Redirection Methods
+    async getEmailRedirections(args: any) {
+        if (!this.ovhClient) {
+            throw new Error("OVH client not initialized. Please call ovh_initialize_client first.");
+        }
+
+        try {
+            const redirectionIds = await this.ovhClient.requestPromised('GET', `/email/domain/${args.domain}/redirection`);
+
+            if (!Array.isArray(redirectionIds) || redirectionIds.length === 0) {
+                return {
+                    content: [{
+                        type: "text",
+                        text: JSON.stringify({ redirections: [], count: 0 }, null, 2)
+                    }]
+                };
+            }
+
+            // Fetch details for each redirection (limit to 50)
+            const limitedIds = redirectionIds.slice(0, 50);
+            const redirections = await Promise.all(
+                limitedIds.map(async (id: string) => {
+                    try {
+                        return await this.ovhClient.requestPromised('GET', `/email/domain/${args.domain}/redirection/${id}`);
+                    } catch (e) {
+                        return { id, error: 'Failed to fetch redirection details' };
+                    }
+                })
+            );
+
+            return {
+                content: [{
+                    type: "text",
+                    text: JSON.stringify({
+                        redirections,
+                        count: redirections.length,
+                        total: redirectionIds.length,
+                        truncated: redirectionIds.length > 50
+                    }, null, 2)
+                }]
+            };
+        } catch (error: any) {
+            return this.handleEmailError(error, `list redirections for ${args.domain}`);
+        }
+    }
+
+    async getEmailRedirection(args: any) {
+        if (!this.ovhClient) {
+            throw new Error("OVH client not initialized. Please call ovh_initialize_client first.");
+        }
+
+        try {
+            const result = await this.ovhClient.requestPromised('GET', `/email/domain/${args.domain}/redirection/${args.redirectionId}`);
+            return {
+                content: [{
+                    type: "text",
+                    text: JSON.stringify(result, null, 2)
+                }]
+            };
+        } catch (error: any) {
+            return this.handleEmailError(error, `get redirection ${args.redirectionId}`);
+        }
+    }
+
+    async createEmailRedirection(args: any) {
+        if (!this.ovhClient) {
+            throw new Error("OVH client not initialized. Please call ovh_initialize_client first.");
+        }
+
+        try {
+            const data = {
+                from: args.from.includes('@') ? args.from : `${args.from}@${args.domain}`,
+                to: args.to,
+                localCopy: args.localCopy || false
+            };
+
+            const result = await this.ovhClient.requestPromised('POST', `/email/domain/${args.domain}/redirection`, data);
+
+            return {
+                content: [{
+                    type: "text",
+                    text: JSON.stringify({
+                        success: true,
+                        message: `Email redirection created: ${data.from} → ${data.to}`,
+                        result
+                    }, null, 2)
+                }]
+            };
+        } catch (error: any) {
+            return this.handleEmailError(error, `create redirection from ${args.from}`);
+        }
+    }
+
+    async deleteEmailRedirection(args: any) {
+        if (!this.ovhClient) {
+            throw new Error("OVH client not initialized. Please call ovh_initialize_client first.");
+        }
+
+        try {
+            // Get redirection details before deletion
+            const redirection = await this.ovhClient.requestPromised('GET', `/email/domain/${args.domain}/redirection/${args.redirectionId}`);
+
+            await this.ovhClient.requestPromised('DELETE', `/email/domain/${args.domain}/redirection/${args.redirectionId}`);
+
+            return {
+                content: [{
+                    type: "text",
+                    text: JSON.stringify({
+                        success: true,
+                        message: `Email redirection deleted successfully`,
+                        deletedRedirection: redirection
+                    }, null, 2)
+                }]
+            };
+        } catch (error: any) {
+            return this.handleEmailError(error, `delete redirection ${args.redirectionId}`);
+        }
+    }
+
+    // Helper method for Email error handling
+    handleEmailError(error: any, operation: string) {
+        console.error(`Email operation failed (${operation}):`, error);
+
+        let errorMessage = "Unknown error occurred";
+
+        if (error instanceof Error) {
+            errorMessage = error.message;
+        } else if (typeof error === 'string') {
+            errorMessage = error;
+        } else if (error && typeof error === 'object') {
+            if (error.errorCode) {
+                errorMessage = `OVH API Error ${error.errorCode}: ${error.message || 'Unknown error'}`;
+            } else if (error.message) {
+                errorMessage = error.message;
+            } else {
+                errorMessage = JSON.stringify(error);
+            }
+        }
+
+        return {
+            content: [{
+                type: "text",
+                text: `Error: Failed to ${operation}: ${errorMessage}`
+            }]
+        };
+    }
+
     async start() {
         const transport = new StdioServerTransport();
         await this.server.connect(transport);
@@ -601,7 +1833,21 @@ module.exports = {
     OvhMcpServer,
     InitializeClientSchema,
     InitializeOAuth2Schema,
-    MakeRequestSchema
+    MakeRequestSchema,
+    // DNS Schemas
+    DnsZoneSchema,
+    DnsRecordFilterSchema,
+    DnsRecordIdSchema,
+    CreateDnsRecordSchema,
+    UpdateDnsRecordSchema,
+    // Email Schemas
+    EmailDomainSchema,
+    EmailAccountSchema,
+    CreateEmailAccountSchema,
+    UpdateEmailAccountSchema,
+    ChangeEmailPasswordSchema,
+    EmailRedirectionSchema,
+    CreateEmailRedirectionSchema
 };
 
 // Start server if run directly
